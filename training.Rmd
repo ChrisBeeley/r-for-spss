@@ -1,0 +1,677 @@
+---
+title: "R for SPSS users"
+author: "Chris Beeley"
+date: "07/05/2019"
+output: ioslides_presentation
+---
+
+```{r setup, include = FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+```
+
+## Introduction
+
+* RStudio
+* Loading and saving data
+* Common statistical tests
+* Summarising data
+* Other data operations (e.g. filtering)
+
+## RStudio
+
+* Panes
+* The terminal
+* Code files and running lines of code
+* Files
+* Environment variables
+
+## Packages
+
+* R has support for packages, which enhance and add to the way R works
+* There are over 14,000 packages
+* Some are very useful to many, many are for very specific tasks, such as analysing eye tracking data or MRIs
+
+## The tidyverse
+
+* I'm going to teach you R the tidyverse way
+* As opposed to the base R way
+* "The tidyverse is an opinionated collection of R packages designed for data science. All packages share an underlying design philosophy, grammar, and data structures"
+* We'll talk more about the tidyverse as the day progresses
+
+## Reading data
+
+* read_csv
+    - From the readr package, which is part of the tidyverse
+* You can point and click within RStudio to load in data with read_csv
+* This will also generate the code that was used to load in the data
+* This can then be copied into the script
+
+## Code
+
+<!-- https://www.reddit.com/r/datasets/comments/1uyd0t/200000_jeopardy_questions_in_a_json_file/ -->
+
+```{r}
+
+library(readr)
+JEOPARDY <- read_csv("JEOPARDY.csv")
+
+# note that I added the correct column for teaching purposes!
+
+```
+
+EXERCISE ONE
+
+## Dataframes and data checking
+
+* A dataframe is a load of rows and columns, with each column containing the same data type (just like in SPSS)
+* You can check your dataframe in the following ways
+    - Click in the environment panel
+    - str()
+    - head() + tail()
+    - summary()
+    
+## Dataframes and data checking
+
+* You can access each column on its own using $ or [[""]]
+    - df$PatientID
+    - df["PatientID"]
+    - str(), head(), tail(), summary() all still work
+    - table() can be useful
+    - Can use [] to subset df$PatientID[6]
+    - Or multiple df$PatientID[10 : 20]
+    
+## Data types
+
+* Numbers
+* Characters
+* Dates
+* Boolean
+* Factors
+
+## Let's make a factor
+
+```{r}
+
+JEOPARDY$Round <- factor(JEOPARDY$Round, 
+                         levels = c("Jeopardy!", 
+                                    "Double Jeopardy!", 
+                                    "Final Jeopardy!"))
+
+```
+
+EXERCISE TWO
+
+## Missing data and other strange values
+
+* NA
+* Inf
+* NaN
+* NULL
+
+## Descriptive statistics
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+
+NHANES <- read_csv("NHANES.csv")
+
+adults <- NHANES %>% 
+    filter(Age >= 18)
+
+# numerical data
+
+mean(adults$Weight)
+
+mean(adults$Weight, na.rm = TRUE)
+
+```
+
+## Descriptive statistics
+
+```{r}
+
+sd(adults$Weight, na.rm = TRUE)
+
+median(adults$Weight, na.rm = TRUE)
+
+min(adults$Weight, na.rm = TRUE)
+
+max(adults$Weight, na.rm = TRUE)
+
+```
+
+## Summarising a variable
+
+```{r}
+
+summary(adults$Weight, na.rm = TRUE)
+
+```
+
+This command works on lots of R objects, not just variables (we already saw its being used with a dataframe).
+
+## Describing categorical data
+
+```{r}
+
+# categorical data
+
+unique(adults$Race1)
+
+table(adults$Race1)
+
+```
+
+## Percentages
+
+```{r}
+
+prop.table(table(adults$Race1)) * 100
+
+```
+
+EXERCISE THREE
+
+* mean, median, min, max, sd, summary, unique, table, prop.table
+
+## Correlation
+
+```{r}
+
+# standard
+
+cor.test(adults$Height, adults$Weight)
+
+```
+
+## Non parametric
+
+```{r}
+
+cor.test(adults$Height, adults$Weight, method = "spearman")
+
+```
+
+## Non parametric
+
+```{r}
+
+cor.test(adults$Height, adults$Weight, method = "kendall")
+
+```
+
+## Correlation plots
+
+```{r, eval = FALSE}
+
+library(corrplot)
+
+data_corr <- cor(
+  adults %>% 
+    select(Age, Poverty, HomeRooms, Weight, Height, 
+           Pulse, DirectChol, AlcoholYear),
+  use = "pairwise.complete.obs")
+
+corrplot(data_corr, method = "color")
+
+```
+
+## Correlation plots
+
+```{r, echo = FALSE}
+
+library(corrplot)
+
+data_corr <- cor(
+  adults %>% 
+    select(Age, Poverty, HomeRooms, Weight, Height, 
+           Pulse, DirectChol, AlcoholYear),
+  use = "pairwise.complete.obs")
+
+corrplot(data_corr, method = "color")
+
+```
+
+## t test
+
+```{r}
+
+t.test(Weight ~ Gender, data = NHANES)
+
+```
+
+## ANOVA
+
+```{r}
+
+library(dplyr)
+
+PlantGrowth %>% 
+  group_by(group) %>%
+  summarise(
+    count = n(),
+    mean = mean(weight, na.rm = TRUE),
+    sd = sd(weight, na.rm = TRUE)
+  )
+
+```
+
+## ANOVA
+
+```{r}
+
+# Compute the analysis of variance
+# beware if you have an unbalanced design, things get a little more complicated
+
+res.aov <- aov(weight ~ group, data = PlantGrowth)
+
+# Summary of the analysis
+summary(res.aov)
+
+```
+
+## Non parametric difference of means
+
+```{r}
+
+kruskal.test(weight ~ group, data = PlantGrowth)
+
+```
+
+## Regression
+
+* Using the National Health and Nutrition Examination Survey (NHANES) data from the CDC
+* Do some plots
+* Fit a multiple regression
+* Produce diagnostic plots
+
+## Histogram
+
+```{r}
+
+adults %>% 
+    ggplot(aes(x = Weight)) + geom_histogram()
+
+```
+
+## Boxplots
+
+```{r}
+
+adults %>% 
+    ggplot(aes(x = Gender, y = Weight)) + geom_boxplot()
+
+```
+
+## Add a violin plot
+
+```{r}
+
+adults %>% 
+    ggplot(aes(x = Gender, y = Weight)) + geom_boxplot() + 
+    geom_violin(alpha = .3)
+
+```
+
+## Fit a regression model
+
+```{r}
+
+model1 <- lm(Weight ~ Age + Gender + Height + Poverty + 
+                 AlcoholDay + PhysActiveDays, data = adults)
+
+summary(model1)
+
+```
+
+## Results
+
+```{r}
+
+adults %>% 
+    ggplot(aes(x = Height, y = Weight)) + geom_point() + 
+    geom_smooth(method = "lm") + facet_wrap(~ Gender)
+
+```
+
+## Diagnostic plots
+
+```{r}
+
+par(mfrow = c(2, 2))
+
+plot(model1)
+
+```
+
+EXERCISE 4
+
+Histogram:
+
+
+
+## Crosstabs and chi square
+
+```{r}
+
+library(readxl)
+
+titanic <- read_excel("titanic3.xls")
+
+table(titanic$survived, titanic$pclass)
+
+prop.table(table(titanic$survived, titanic$pclass), 2) * 100
+
+```
+
+## Crosstabs
+
+```{r}
+
+titanic_table <- xtabs(~ pclass + survived + sex, data = titanic)
+
+plot(titanic_table)
+
+```
+
+## Chi square
+
+```{r}
+
+chisq.test(table(titanic$survived, titanic$pclass))
+
+```
+
+## GLM
+
+```{r}
+
+glm_model <- glm(Correct ~ Value, data = JEOPARDY, family = binomial)
+
+summary(glm_model)
+
+```
+
+## GLM
+
+```{r}
+
+predict(glm_model, 
+        newdata = data.frame(Value = c(200, 400, 600, 800, 1000)), 
+        type = "response")
+
+```
+
+## Survival analysis
+
+```{r}
+
+library(survival)
+
+fit <- survfit(Surv(time, status) ~ sex, data = lung)
+fit
+
+summary(fit)$table
+
+```
+
+## Plotting
+
+```{r}
+
+library(survminer)
+
+ggsurvplot(fit, pval = TRUE, conf.int = TRUE, risk.table = TRUE, 
+          risk.table.col = "strata", linetype = "strata", 
+          surv.median.line = "hv", ggtheme = theme_bw(), 
+          palette = c("#E7B800", "#2E9FDF"))
+
+```
+
+## Mixed effects models
+
+```{r}
+
+library(lme4)
+
+ggplot(sleepstudy, aes(x = Days, y = Reaction, col = Subject)) + 
+    geom_point() + stat_smooth(method= 'lm', se = F) + 
+    facet_wrap(~ Subject) + guides(col = F)
+
+```
+
+## Random intercepts
+
+```{r}
+
+lmemodel1 <- lmer(Reaction ~ Days + (1 | Subject),
+            data = sleepstudy)
+
+summary(lmemodel1)
+
+```
+
+## Random slopes
+ 
+```{r}
+
+lmemodel2 <- lmer(Reaction ~ Days + (0 + Days | Subject),
+            data = sleepstudy)
+
+summary(lmemodel2)
+
+```
+
+## Random slopes and random intercepts
+
+```{r}
+
+lmemodel3 <- lmer(Reaction ~ Days + (1 + Days | Subject),
+            data = sleepstudy)
+
+summary(lmemodel3)
+
+```
+
+## The tidyverse
+
+* The tidyverse is a set of packages which will help you with your data
+    - ggplot2
+    - dplyr
+    - tidyr
+    - readr
+    - purrr
+    - tibble
+    - stringr
+    - forcats
+    
+## Tidy data
+
+* Each variable forms a column
+* Each observation forms a row
+
+```{r}
+
+medals = data.frame(
+  country = c("Norway", "Germany", "Canada"),
+  gold = c(14, 14, 11), 
+  silver = c(14, 10, 8),
+  bronze = c(11, 7, 10)
+)
+
+medals
+
+```
+
+## Tidying
+
+```{r}
+
+library(tidyr)
+
+gather(medals, key = Type, value = Medals, -country)
+
+```
+
+    
+## ggplot2
+
+* Accepts only tidy data
+* Each is made from an aes() and a geom_...()
+
+```{r, eval = FALSE}
+
+housing <- read_csv("landdata-states.csv")
+
+subset_housing <- housing %>% 
+  filter(State %in% c("MA", "TX"))
+
+ggplot(subset_housing,
+       aes(x=Date,
+           y=Home.Value,
+           color=State))+
+  geom_line()
+
+```
+
+## ggplot2
+
+```{r, echo = FALSE}
+
+housing <- read_csv("landdata-states.csv")
+
+ggplot(filter(housing, State %in% c("MA", "TX")),
+       aes(x=Date,
+           y=Home.Value,
+           color=State))+
+  geom_point()
+
+```
+
+## A diversion about pipes
+
+* Pipes are ubiquitous in R code in the wild now
+* You will need to understand them to read code that you find online
+* Basically, mpg %>% summary() is equivalent to summary(mpg)
+* gapminder %>% filter(year > 1960) is equivalent to filter(gapminder, year > 1960)
+* In general, x %>% f %>% g %>% h is equivalent to h(g(f(x)))
+
+## A larger example
+
+```{r, eval = FALSE}
+
+gapminder %>%
+    filter(year > 1960) %>%
+    group_by(continent, year) %>%
+    summarise(meanLife = mean(lifeExp))
+
+```
+
+Is equivalent to
+
+```{r, eval = FALSE}
+
+summarise(
+    group_by(
+        filter(gapminder, year > 1960),
+        continent, year),
+    meanLife = mean(lifeExp))
+
+```
+
+## Using facets
+
+```{r}
+
+ggplot(housing, aes(x = Date, y = Home.Value, color = State)) + 
+  geom_line()
+
+```
+
+## Nicer plot
+
+```{r}
+
+ggplot(housing, aes(x = Date, y = Home.Value)) + geom_line() +
+   facet_wrap(~State, ncol = 10)
+
+```
+
+## Loading SPSS data
+
+* This could be painful the first time!
+    - I can help
+* Once you've got it loaded resave:
+    - As csv
+    - As .Rdata
+    
+```{r}
+
+library(haven)
+
+dummy <- read_spss("Dummy_SPSS.sav")
+
+labelled_dummy <- as_factor(dummy)
+
+```
+
+## Tidyverse- mutate
+
+```{r}
+
+dummy <- dummy %>% 
+  mutate(Discharge_Location = na_if(MHA_classification, 999))
+
+```
+
+## Tidyverse- group_by
+
+```{r}
+
+labelled_dummy %>% 
+  group_by(Ethnicity) %>% 
+  count()
+
+```
+
+## Tidyverse- filter
+
+```{r}
+
+labelled_dummy %>% 
+  filter(Previous_convictions > 10) %>% 
+  summarise(mean(T1_HCR20_Hist, na.rm = TRUE))
+
+```
+
+## Saving data
+
+```{r, eval = FALSE}
+
+# .Rdata
+
+save(dummy, labelled_dummy, file = "spss_dummy.Rdata")
+
+# .RDS
+
+saveRDS(dummy, file = "spss_dummy_unlabelled.rds")
+
+# they load differently
+
+load("spss_dummy.Rdata")
+
+dummy_new <- readRDS("spss_dummy_unlabelled.rds")
+
+```
+
+## A note on packages
+
+* You will need to install the packages from today on your machine
+* You can do this with install.packages() or by pointing and clicking with RStudio
+* You can install several (such as tidyr, ggplot2, and readr) all at once with install.packages("tidyverse")
+
+EXERCISE 5
